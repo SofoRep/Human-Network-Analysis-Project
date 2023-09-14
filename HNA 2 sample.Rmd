@@ -1,0 +1,778 @@
+---
+title: "Human Network Analysis - Assignment 2"
+author: "Sofoklis"
+date: "2023-09-14"
+output: html_document
+description: "Analysis of two social networks and modelling diffusion process using an IC model and packages in RStudio such as igraph, network and intergraph."
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+```{r libraries and data input, echo=FALSE}
+#libraries
+library(igraph)
+library(RColorBrewer)
+library(visNetwork)
+library(ggplot2)
+
+#datainput
+highschool_edge<-read.csv("C:/Program Files/R/R-4.0.0/Applied Data Science Projects/Human Network Analysis Assignment 2/Highschool_network_edge.csv",header=FALSE)
+highschool_att<-read.csv("C:/Program Files/R/R-4.0.0/Applied Data Science Projects/Human Network Analysis Assignment 2/Highschool_network_att.csv",header = TRUE)
+facebook_edge<-read.csv("C:/Program Files/R/R-4.0.0/Applied Data Science Projects/Human Network Analysis Assignment 2/Facebook_network_edge.csv",header=FALSE)
+facebook_att<-read.csv("C:/Program Files/R/R-4.0.0/Applied Data Science Projects/Human Network Analysis Assignment 2/Facebook_network_att.csv",header = TRUE)
+
+#build high school network
+highschool_nodes<-data.frame(name=as.character(highschool_att$NodeID),
+                             gender=as.character(highschool_att$Gender),
+                             hall=as.character(highschool_att$Hall))
+highschool_edges<-data.frame(from=c(as.character(highschool_edge[,1])),
+                             to=c(as.character(highschool_edge[,2])))
+Highschool<-graph_from_data_frame(highschool_edges,directed = FALSE,vertices = highschool_nodes)
+co <- components(Highschool)
+Highschool <- induced.subgraph(Highschool, which(co$membership == which.max(co$csize))) #use only the largest component for analysis
+summary(Highschool)
+
+#build facebook network
+facebook_nodes<-data.frame(name=as.character(facebook_att$NodeID))
+facebook_edges<-data.frame(from=c(as.character(facebook_edge[,1])),
+                           to=c(as.character(facebook_edge[,2])))
+Facebook<-graph_from_data_frame(facebook_edges,directed = FALSE,vertices = facebook_nodes)
+summary(Facebook)
+```
+
+## Excercise 1:
+
+```{r Question 1, echo=FALSE}
+# QUESTION 1: -----------------------------------------------------------------
+Highd <- degree(Highschool, mode = 'all')
+which.max(Highd) 
+# node s54
+
+Highc <- closeness(Highschool, normalized = TRUE)
+which.max(Highc)
+# node s37
+
+Highb <- betweenness(Highschool, directed = FALSE, normalized = TRUE)
+which.max(Highb)
+# node s37
+
+Highe <- eigen_centrality(Highschool)
+which.max(Highe$vector)
+# node s110
+```
+```{r question 1}
+#function to visualize the network (with interaction)
+set.seed(100)
+Highschool_interactive_layout<-visNetwork(data.frame(id=V(Highschool)$name), highschool_edges, main = "Highschool",submain="Can zoom in/out to check the IDs and ties") %>%
+  visIgraphLayout(layout = "layout_nicely",smooth =  FALSE) %>%
+  visNodes(shape="circle",label = TRUE) %>% 
+  visOptions(highlightNearest = list(enabled = T, hover = T), nodesIdSelection = T)
+
+Highschool_interactive_layout  
+```
+``` {r question 2, echo=FALSE}
+# QUESTION 2: -----------------------------------------------------------------
+#plot(Highd, Highc)
+#plot(Highd, Highb)
+
+cor(Highd,Highb)
+ggplot() +
+  geom_point(aes(x = Highd, y = Highb),  size = 1.4 ) +
+  theme_minimal()+
+  geom_smooth(aes(x = Highd, y = Highb), method ='lm', show.legend = T)+
+  labs(title = 'Degrees and Betweenness', subtitle = 'r = 0.63')
+
+cor(Highd,Highc)
+ggplot() +
+  geom_point(aes(x = Highd, y = Highc),  size = 1.4 ) +
+  theme_minimal()+
+  geom_smooth(aes(x = Highd, y = Highc), method ='lm', show.legend = T)+
+  labs(title = 'Degrees and Closeness', subtitle = 'r = 0.77')
+
+cor(Highd,Highe$vector)
+ggplot() +
+  geom_point(aes(x = Highd, y = Highe$vector),  size = 1.4 ) +
+  theme_minimal()+
+  geom_smooth(aes(x = Highd, y = Highe$vector), method ='lm', show.legend = T)+
+  labs(title = 'Degrees and Eigenvector Centrality', subtitle = 'r = 0.63')
+
+# Facebook network:
+Faced <- degree(Facebook, mode = 'all')
+which.max(Faced) 
+# node s54
+
+Facec <- closeness(Facebook, normalized = TRUE)
+which.max(Facec)
+# node s37
+
+Faceb <- betweenness(Facebook, directed = FALSE, normalized = TRUE)
+which.max(Faceb)
+# node s37
+
+Facee <- eigen_centrality(Facebook)
+which.max(Facee$vector)
+
+cor(Faced,Faceb)
+ggplot() +
+  geom_point(aes(x = Faced, y = Faceb),  size = 1.4 ) +
+  theme_minimal()+
+  geom_smooth(aes(x = Faced, y = Faceb), method ='lm', show.legend = T)+
+  labs(title = 'Degrees and Betweenness', subtitle = 'r = 0.45')
+
+cor(Faced,Facec)
+ggplot() +
+  geom_point(aes(x = Faced, y = Facec),  size = 1.4 ) +
+  theme_minimal()+
+  geom_smooth(aes(x = Faced, y = Facec), method ='lm', show.legend = T)+
+  labs(title = 'Degrees and Closeness', subtitle = 'r = 0.27')
+
+cor(Faced,Facee$vector)
+ggplot() +
+  geom_point(aes(x = Faced, y = Facee$vector),  size = 1.4 ) +
+  theme_minimal()+
+  geom_smooth(aes(x = Faced, y = Facee$vector), method ='lm', show.legend = T)+
+  labs(title = 'Degrees and Eigenvector Centrality', subtitle = 'r = 0.57')
+
+
+```
+``` {r question 3}
+# QUESTION 3: -------------------------------------------------------------
+
+HighDist <- distances(
+              Highschool,
+              v = V(Highschool),
+              to = V(Highschool),
+              mode = c("all", "out", "in"),
+              weights = NULL) #Shortest path lengths between every pair of two nodes in the network
+
+FaceDist <- distances(
+              Facebook,
+              v = V(Facebook),
+              to = V(Facebook),
+              mode = c("all", "out", "in"),
+              weights = NULL) #Shortest path lengths between every pair of two nodes in the network
+            
+hist(HighDist)
+hist(FaceDist)
+
+
+Highq3 <- table(HighDist)
+Hnumber6 <- Highq3[1]+Highq3[2]+Highq3[3]+Highq3[4]+Highq3[5]+Highq3[6]+Highq3[7]
+percentageHigh6 <- Hnumber6/sum(Highq3)
+# 0.9857
+# which means that 98% of pairs of Highschool students are within 6 degrees (length of shortest path).  
+
+
+Faceq3 <- table(FaceDist)
+Fnumber6 <- Faceq3[1]+Faceq3[2]+Faceq3[3]+Faceq3[4]+Faceq3[5]+Faceq3[6]+Faceq3[7]
+percentageFace6 <- Fnumber6/sum(Faceq3)
+# 0.9797
+# which means that 97% of pairs of Facebook users are within 6 degrees (length of shortest path).  
+
+# NEED to expand more on separation rule based on degree distribution for both networks!!
+
+
+
+# histogram of highschool degrees:
+degree_distH <- degree(Highschool)
+hist(degree_distH, xlab = "Highschool degrees", ylab = "Frequency")
+
+# histogram of Facebook  degrees:
+degree_distF <- degree(Facebook)
+hist(degree_distF, breaks = 100, xlab = "Facebook degrees", ylab = "Frequency")
+
+summary(degree_distH)
+summary(degree_distF)
+
+
+
+```
+``` {r question 4}
+# QUESTION 4: -----------------------------------------------------------------
+
+# 1) 
+# Whole Network plot with gender attribute coloring:
+coul  <- brewer.pal(length(unique( V(Highschool)$gender)), "Set2")
+my_color <- coul[as.numeric(as.factor(V(Highschool)$gender))]
+set.seed(10)
+plot(Highschool, vertex.color = my_color,
+     vertex.size=5,
+     layout=layout.fruchterman.reingold(Highschool),vertex.label=NA,
+     main="Highschool network by gender")
+legend("bottomleft", legend=levels(as.factor(V(Highschool)$gender)) ,col = coul , bty = "n", pch=20 , pt.cex = 1.5, cex = 1.5, horiz = FALSE, inset = c(0.1, 0.1))
+
+
+#introduce subgraph by gender, calculate their edge densities
+#group <- as.factor(unique(V(Highschool)$gender))
+#sapply(levels(group), function(x) {
+#  y <- induced_subgraph(Highschool, which(V(Highschool)$gender==x))
+#  paste0("Density for ", x, " friends is ", edge_density(y))
+#})
+
+
+
+# Whole Network plot with Hall attribute coloring:
+coul  <- brewer.pal(length(unique( V(Highschool)$hall)), "Set2")
+my_color <- coul[as.numeric(as.factor(V(Highschool)$hall))]
+set.seed(10)
+plot(Highschool, vertex.color = my_color,
+     vertex.size=5,
+     layout=layout.fruchterman.reingold(Highschool),vertex.label=NA,
+     main="Highschool network by hall")
+legend("bottomleft", legend=levels(as.factor(V(Highschool)$hall)) ,col = coul , bty = "n", pch=20 , pt.cex = 1.5, cex = 1.5, horiz = FALSE, inset = c(0.1, 0.1))
+
+```
+```{r question 5}
+# QUESTION 5: ----------------------------------------------------
+
+# a)
+### customize community by gender ###
+genderCommunity<-V(Highschool)$gender
+genderCommunity<-replace(genderCommunity,genderCommunity=="female",1)
+genderCommunity<-replace(genderCommunity,genderCommunity=="male",2)
+genderCommunity<-replace(genderCommunity,genderCommunity=="unknown",3)
+genderCommunity<-as.numeric(genderCommunity)
+
+gender.clustering <- make_clusters(Highschool, membership=genderCommunity)
+modularity(gender.clustering)
+
+
+# b)
+### customize community by hall ###
+hallCommunity <- V(Highschool)$hall 
+hallCommunity <- replace(hallCommunity,hallCommunity=="1501",1501)
+hallCommunity <- replace(hallCommunity,hallCommunity=="1502",1502)
+hallCommunity <- replace(hallCommunity,hallCommunity=="1503",1503)
+hallCommunity <- replace(hallCommunity,hallCommunity=="1504",1504)
+hallCommunity <- replace(hallCommunity,hallCommunity=="1505",1505)
+hallCommunity <- as.numeric(hallCommunity)
+
+hall.clustering <- make_clusters(Highschool, membership = hallCommunity)
+modularity(hall.clustering)
+
+
+# 3) 
+Louv <- cluster_louvain(Highschool)
+modularity(Louv)
+
+```
+```{r question 6}
+## QUESTION 6 ------------------------------------------------
+
+# 1):
+
+ER1 <- sample_gnp(20, p=0.2, directed = FALSE, loops = FALSE)
+
+plot(ER1,
+     vertex.size=5,
+     layout=layout.fruchterman.reingold(ER1),vertex.label=NA,
+     main="ER1")
+
+ER2 <- sample_gnp(20, p=0.4, directed = FALSE, loops = FALSE)
+
+plot(ER2,
+     vertex.size=5,
+     layout=layout.fruchterman.reingold(ER2),vertex.label=NA,
+     main="ER2")
+
+ER3 <- sample_gnp(20, p=0.6, directed = FALSE, loops = FALSE)
+
+plot(ER3,
+     vertex.size=5,
+     layout=layout.fruchterman.reingold(ER3),vertex.label=NA,
+     main="ER3")
+
+## Graphs look more dense as p increases.. # we need to elaborate more on this.
+
+# 2)
+# large graph over p:
+
+ER1000 <- sample_gnp(1000, p=0.003, directed = FALSE, loops = FALSE)
+
+plot(ER1000,
+     vertex.size=5,
+     layout=layout.fruchterman.reingold(ER1000),vertex.label=NA,
+     main="ER1000")
+
+transitivity(ER1000)
+# more or less 0.00452 close to p. Expected mean local clustering coefficient is p.
+
+```
+``` {r question 7}
+# QUESTION 7:----------------------------------------------------------------
+
+Regular<-watts.strogatz.game(dim=1,size=300,nei=6, p=0)
+plot(Regular, layout=layout.circle, vertex.label=NA, vertex.size=5, main= "Network with zero rewiring probability ")
+
+SW1<-watts.strogatz.game(dim=1,size=300,nei=6, p=0.001)
+plot(SW1, layout=layout.circle, vertex.label=NA, vertex.size=5, main= "Network with 0.001 rewiring probability ")
+
+SW2<-watts.strogatz.game(dim=1,size=300,nei=6, p=0.01)
+plot(SW2, layout=layout.circle, vertex.label=NA, vertex.size=5, main= "Network with 0.01 rewiring probability ")
+
+SW3<-watts.strogatz.game(dim=1,size=300,nei=6, p=0.1)
+plot(SW3, layout=layout.circle, vertex.label=NA, vertex.size=5, main= "Network with 0.1 rewiring probability ")
+
+transitivity(Regular)
+transitivity(SW1)
+transitivity(SW2)
+transitivity(SW3)
+
+average.path.length(Regular)
+average.path.length(SW1)
+average.path.length(SW2)
+average.path.length(SW3)
+
+# Both clustering coefficient and average path length decrease as the p increases.
+
+```
+``` {r question 9}
+# QUESTION 9: ---------------------------------------
+
+# 1):
+
+g0 <- barabasi.game(100, power = 0.5, m = NULL, out.dist = NULL, out.seq = NULL, out.pref = FALSE, zero.appeal = 1, directed = FALSE,algorithm ="psumtree", start.graph = NULL)
+
+plot(g0, vertex.label= NA, edge.arrow.size=0.02,vertex.size =5, main = "Scale-free network model, power=1")
+
+# The power parameter corresponds to the preferential attachment of the Barabasi-Albert generated graph,
+# which is the probability that a new node will connect to existing node i based on the 
+# quantity Π(ki) where ki is the degree of node i 
+#
+
+# As the power/preferential attachment increases, more nodes are reached by the most-connected/central nodes of the graph. 
+
+
+# 2) random attack and targeted attack: 
+#
+# The network with power=0.5 has a highly skewed degree distribution
+# with a few nodes having a very high degree and many nodes having a
+# low degree. As a consequence, this network is vulnerable to targeted attacks,
+# as removing some high-degree nodes may lead to significant loss of 
+# connectivity. Also, from random attacks this might also be the case
+# since high degree nodes are critical and they are few.
+#
+# On the other hand, a network with power=1.5 has a more even degree distribution,
+# with a greater number of nodes having moderate to high degree. As a result 
+# this graph is resilient in both random and targeted attacks. 
+
+```
+``` {r question 10}
+################# EXERCISE THREE #############################################
+
+# QUESTION 10: ------------------------
+
+# We will use the betweeness metric since an edge with high betweeness works like a bridge for many nodes in the network and thus
+# deleting such edges will increase the average length path:
+
+# find the 5 edges with highest betweenness
+g <- Highschool
+eb <- edge_betweenness(g)
+top_edges <- sort(eb, decreasing = TRUE)[1:5]
+
+# get the edge IDs for the top edges
+top_edge_ids <- E(g)[which(eb %in% top_edges)]
+
+g <- delete_edges(g, top_edge_ids)
+
+average.path.length(Highschool)
+average.path.length(g)
+
+# S4 --S37 S4 --S77 S17--S70 S24--S72 S37--S90 
+# average path length (Highschool) = 3.69
+# new average path length = 3.95 
+# we observe that the average path length is indeed increased after the deletion of these edges.
+
+```
+``` {r question 11}
+# QUESTION 11: ---------------------------
+
+# IC model for simple contagion simulation code:
+
+stopifnot(require(data.table))
+stopifnot(require(Matrix))
+
+calculate_value <- function(node, each_neighbors,Pprob){
+  return(each_neighbors[[node]][ which(runif(length(each_neighbors[[node]]), 0, 1)<=Pprob)])
+  #'runif' is a function to generate random number in R
+}
+#This function:
+#1) searches the neighbors of contagious node; 
+#2) To those who are connected to a contagious node, generates a random number and compare to the 
+#probability of p, if random number<p, this node will be infected and return the value of 1
+
+IC<-function(node_seed,network,Pprob){
+  
+  #prepare input for the 'calculate_value' function#
+  adj_matrix <- igraph::as_adjacency_matrix(network, type = 'both')
+  each_neighbors <- which(adj_matrix > 0, arr.ind = TRUE)
+  each_neighbors <- split(each_neighbors[, 2], each_neighbors[, 1]) #get the neigbhour list of each node
+  
+  nNode<-vcount(network)
+  node_status <- rep.int(0, nNode) #start from a healthy population
+  day_infected<-vector()#Total number of infected population
+  new_infected <- list()  # Record the ID of person getting infected at each time step
+  
+  day<-1
+  node_status[as.numeric(node_seed)] <- 1 # infected(value=1) health(value=0)
+  day_infected[day] <- sum(node_status ) 
+  new_infected[[day]]<-node_seed #The ID of the person infected in Day 1 (Patient Zero)
+  
+  #simulate the spread of virus within 4 weeks##
+  for (day in c(2:28)){  
+    ContagiousID<-which(node_status == 1) 
+    infectedID<-unlist(lapply(ContagiousID,calculate_value,each_neighbors,Pprob))
+    newinfectedID<- setdiff(infectedID, which(node_status == 1))
+    
+    #Update the node status and other variables
+    node_status[newinfectedID] <- 1
+    day_infected[day] <- length(newinfectedID)
+    new_infected[[day]]<-newinfectedID
+    
+    day=day+1
+  }
+  return(day_infected)  #return the number of newly infected people by day 
+  #return(list(day_infected,new_infected)) #if you want to see the ID of infected ppl in each day, use this command instead
+}
+
+# now we call the IC simple contagion function with arguments: node_seed = "s5", network = Highschool and Pprob = 0.15
+# for 100 simulations:
+
+infected_per_sim<- c()
+for (i in 1:100){
+  infected_per_sim[i] <- sum(IC(node_seed =  "5", network = Highschool, Pprob = 0.15))
+}
+
+# and the average result is:
+mean(infected_per_sim)   # = 120.7 more or less - infected people on average 
+print("the infected people on average by the IC model")
+```
+``` {r question 12}
+# 1) removing 5 nodes based on q10
+
+#q12_1 <- subgraph(Highschool, V(Highschool) != '37'& V(Highschool) != '4' & V(Highschool) != '24' & V(Highschool) != '70')
+# the above is for deleting the 5 nodes with highest betweeness
+
+# same as q10 steps:
+g<- Highschool
+eb <- edge_betweenness(g)
+top_edges <- sort(eb, decreasing = TRUE)[1:5]
+
+# get the edge IDs for the top edges
+top_edge_ids <- E(g)[which(eb %in% top_edges)]
+
+Highschool_2 <- delete_edges(g, top_edge_ids)
+
+
+# 2) removing 5 strong ties:
+# which means; remove vertices that form closed triangles:
+# we will remove the vertices that occur the most in closed triangles! 
+
+q12_2 <- Highschool
+
+# get all closed triangles: 
+triangles = cliques(Highschool, min=3, max=3)
+
+# store them in a df: (each column corresponds to a vertex name of a triangle)
+df_tri = lapply(triangles, function(x){V(Highschool)$name[x]})
+df_trif = data.frame(matrix(unlist(df_tri),ncol = 3, byrow = T))
+
+# get the number of occurences for each node in the triangles df:
+counts = table(unlist(df_trif))
+
+# sort the counts in decreasing order:
+sorted_counts = sort(counts, decreasing = T)
+
+# Get the names of the three most frequent elements:
+top_three = names(sorted_counts)[1:3]
+
+# Pick the three nodes with the highest occurring number in triangles"
+selected = unique(unlist(df_trif))[which(unique(unlist(df_trif)) %in% top_three)][1:3]
+
+extract_numbers <- function(str_list) {
+  numbers_list <- list()
+  for (i in 1:length(str_list)) {
+    # Use regular expression to extract numbers
+    numbers <- gsub("[^0-9.-]+", "", str_list[[i]])
+    # Convert string to numeric array
+    numbers_array <- as.numeric(unlist(strsplit(numbers, "")))
+    numbers_list[[i]] <- numbers_array
+  }
+  return(numbers_list)
+}
+
+
+merge_list <- function(input_list) {
+  merged_list <- list()
+  for (i in 1:length(input_list)) {
+    # Check if the current element is a numeric vector
+    if (is.numeric(input_list[[i]])) {
+      # Convert the vector to a single number and store it in the merged list
+      merged_list[[length(merged_list)+1]] <- as.numeric(paste(input_list[[i]], collapse = ""))
+    } else {
+      # Otherwise, store the current element in the merged list as is
+      merged_list[[length(merged_list)+1]] <- input_list[[i]]
+    }
+  }
+  return(merged_list)
+}
+
+
+selected_vs = extract_numbers(selected)
+selected_vs = merge_list(selected_vs)
+
+Highschool_3<- delete_vertices(Highschool,selected_vs)
+
+
+# 3) 
+
+# First re redefine the IC model function to return the list of the number and IDs of infected nodes per day: 
+IC<-function(node_seed,network,Pprob){
+  
+  #prepare input for the 'calculate_value' function#
+  adj_matrix <- igraph::as_adjacency_matrix(network, type = 'both')
+  each_neighbors <- which(adj_matrix > 0, arr.ind = TRUE)
+  each_neighbors <- split(each_neighbors[, 2], each_neighbors[, 1]) #get the neighbor list of each node
+  
+  nNode<-vcount(network)
+  node_status <- rep.int(0, nNode) #start from a healthy population
+  day_infected<-vector()#Total number of infected population
+  new_infected <- list()  # Record the ID of person getting infected at each time step
+  
+  day<-1
+  node_status[as.numeric(node_seed)] <- 1 # infected(value=1) health(value=0)
+  day_infected[day] <- sum(node_status ) 
+  new_infected[[day]]<-node_seed #The ID of the person infected in Day 1 (Patient Zero)
+  
+  #simulate the spread of virus within 4 weeks##
+  for (day in c(2:28)){  
+    ContagiousID<-which(node_status == 1) 
+    infectedID<-unlist(lapply(ContagiousID,calculate_value,each_neighbors,Pprob))
+    newinfectedID<- setdiff(infectedID, which(node_status == 1))
+    
+    #Update the node status and other variables
+    node_status[newinfectedID] <- 1
+    day_infected[day] <- length(newinfectedID)
+    new_infected[[day]]<-newinfectedID
+    
+    day=day+1
+  }
+  #return(day_infected)  #return the number of newly infected people by day 
+  return(list(day_infected,new_infected)) #if you want to see the ID of infected ppl in each day, use this command instead
+}
+
+
+# IC Highschool model with prob=0.15 with seed node S5:
+
+IC_High = IC('5',Highschool,0.15)
+IC_High_count = IC_High[[1]]
+
+IC_High2 = IC('5',Highschool_2,0.15)
+IC_High2_count = IC_High2[[1]]
+
+IC_High3 = IC('5',Highschool_3,0.15)
+IC_High3_count = IC_High3[[1]]
+
+# now we create the plot with three lines for each IC network model of infected people per day: 
+# first store the arrays of infected per day for each model in a dataframe:
+
+dfH = data.frame(x = 1:length(IC_High_count), y = IC_High_count)
+dfH2 = data.frame(x = 1:length(IC_High2_count), y = IC_High2_count)
+dfH3 = data.frame(x = 1:length(IC_High3_count), y = IC_High3_count)
+
+ggplot() +
+  geom_line(data = dfH, aes(x = x, y = y), color = "red") +
+  geom_line(data = dfH2, aes(x = x, y = y), color = "blue") +
+  geom_line(data = dfH3, aes(x = x, y = y), color = "green") +
+  labs(x = "Day", y = "# - newly infected") +
+  scale_color_manual(labels = c("Array 1", "Array 2", "Array 3"), 
+                    values=c("red", "blue", "green")) +
+  annotate("text", x = 5, y = 15, label = "Red for Highchool") +
+  annotate("text", x = 5, y = 14, label = "Blue for Highchool2") +
+  annotate("text", x = 5, y = 13, label = "Green for Highschool3")
+
+
+
+
+```
+``` {r question 13}
+# QUESTION 13: --------------------------------------------
+
+# 1) 
+# IC model for Highschool, Highschool 2 and Highschool 3 networks for p = 0.05 and p = 0.50
+# first for p = 0.05
+
+IC_High = IC('5',Highschool,0.05)
+IC_High_count = IC_High[[1]]
+
+IC_High2 = IC('5',Highschool_2,0.05)
+IC_High2_count = IC_High2[[1]]
+
+IC_High3 = IC('5',Highschool_3,0.05)
+IC_High3_count = IC_High3[[1]]
+
+# now we create the plot with three lines for each IC network model of infected people per day: 
+# first store the arrays of infected per day for each model in a dataframe:
+
+dfH = data.frame(x = 1:length(IC_High_count), y = IC_High_count)
+dfH2 = data.frame(x = 1:length(IC_High2_count), y = IC_High2_count)
+dfH3 = data.frame(x = 1:length(IC_High3_count), y = IC_High3_count)
+
+ggplot() +
+  geom_line(data = dfH, aes(x = x, y = y), color = "red") +
+  geom_line(data = dfH2, aes(x = x, y = y), color = "blue") +
+  geom_line(data = dfH3, aes(x = x, y = y), color = "green") +
+  labs(x = "Day", y = "# - newly infected") +
+  scale_color_manual(labels = c("Array 1", "Array 2", "Array 3"), 
+                     values=c("red", "blue", "green")) +
+  annotate("text", x = 5, y = 15, label = "Red for Highchool") +
+  annotate("text", x = 5, y = 14, label = "Blue for Highchool2") +
+  annotate("text", x = 5, y = 13, label = "Green for Highschool3")
+
+# IC model for the three networks with p = 0.50
+
+IC_High = IC('5',Highschool,0.50)
+IC_High_count = IC_High[[1]]
+
+IC_High2 = IC('5',Highschool_2,0.50)
+IC_High2_count = IC_High2[[1]]
+
+IC_High3 = IC('5',Highschool_3,0.50)
+IC_High3_count = IC_High3[[1]]
+
+# now we create the plot with three lines for each IC network model of infected people per day: 
+# first store the arrays of infected per day for each model in a dataframe:
+
+dfH = data.frame(x = 1:length(IC_High_count), y = IC_High_count)
+dfH2 = data.frame(x = 1:length(IC_High2_count), y = IC_High2_count)
+dfH3 = data.frame(x = 1:length(IC_High3_count), y = IC_High3_count)
+
+ggplot() +
+  geom_line(data = dfH, aes(x = x, y = y), color = "red") +
+  geom_line(data = dfH2, aes(x = x, y = y), color = "blue") +
+  geom_line(data = dfH3, aes(x = x, y = y), color = "green") +
+  labs(x = "Day", y = "# - newly infected") +
+  scale_color_manual(labels = c("Array 1", "Array 2", "Array 3"), 
+                     values=c("red", "blue", "green")) +
+  annotate("text", x = 5, y = 15, label = "Red for Highchool") +
+  annotate("text", x = 5, y = 14, label = "Blue for Highchool2") +
+  annotate("text", x = 5, y = 13, label = "Green for Highschool3")
+
+# in all networks the difference in how quickly new people are infected is substantial when the probability of contagion
+# for each node is high, in our case 0.5. Also from the graph the peak of the newly infected is much larger when the probability of
+# infection is high compaired with the case where the probability is low, especially for the Highschool 2 and 3 networks where there are
+# more weak ties then the initial Highschool network...
+
+```
+``` {r question 13_2}
+# 2) 
+# Now we construct the SIR model based on the code for the IC model:
+
+# First we adjust the calculate_value function for returning the list of infected neighbors: 
+calculate_value <- function(node, each_neighbors, Pprob, status){
+  if (status[node] == "Infectious") {
+    return(each_neighbors[[node]][which(status[each_neighbors[[node]]] == "Susceptible" &
+                                          runif(length(each_neighbors[[node]]), 0, 1) <= Pprob)])
+  } else {
+    return(NULL)
+  }
+}
+
+SIR <- function(node_seed, network, Pprob) {
+  adj_matrix <- igraph::as_adjacency_matrix(network, type = 'both')
+  each_neighbors <- which(adj_matrix > 0, arr.ind = TRUE)
+  each_neighbors <- split(each_neighbors[, 2], each_neighbors[, 1]) #get the neighbour list of each node
+  
+  nNode <- vcount(network)
+  node_status <- rep("Susceptible", nNode) #start from a healthy population
+  day_infected <- vector() #Total number of infected population
+  day_recovered <- vector() #Total number of recovered population
+  new_infected <- list()  # Record the ID of person getting infected at each time step
+  
+  day <- 1
+  node_status[as.numeric(node_seed)] <- "Infectious" # infectious
+  day_infected[day] <- sum(node_status == "Infectious") 
+  day_recovered[day] <- sum(node_status == "Recovered")
+  new_infected[[day]] <- node_seed #The ID of the person infected in Day 1 (Patient Zero)
+  
+  for (day in c(2:28)) {  
+    InfectiousID <- which(node_status == "Infectious")
+    
+    newly_infected <- unlist(lapply(InfectiousID, calculate_value, each_neighbors, Pprob, node_status))
+    newly_infected <- setdiff(newly_infected, which(node_status == "Infectious" | node_status == "Recovered"))
+    
+    # Update node status
+    node_status[newly_infected] <- "Infectious"
+    node_status[which(day - 3 == unlist(new_infected))] <- "Recovered"
+    
+    
+    # Update other variables
+    day_infected[day] <- length(newly_infected)
+    day_recovered[day] <- sum(node_status == "Recovered")
+    new_infected[[day]] <- newly_infected
+    
+    day <- day + 1
+  }
+  
+  return(list(day_infected, day_recovered, new_infected))
+}
+
+# Run the simulation 100 times:
+mean_infected <- rep(0, 28)
+mean_recovered <- rep(0, 28)
+
+for (i in 1:100) {
+  result <- SIR("5", Highschool, 0.15)
+  mean_infected <- mean_infected + result[[1]]
+  mean_recovered <- mean_recovered + result[[2]]
+}
+
+mean_infected <- mean_infected / 100 # calculate the average of the mean infected vector per day
+mean_recovered <- mean_recovered / 100 # calculate the average of the mean recovered vector per day 
+
+
+# Total number of infected people by day
+ceiling(mean_infected)
+
+# Total number of recovered people by day
+ceiling(mean_recovered)
+
+
+# now we test the SIR model for Highschool 2 and Highschool 3 networks:
+# NOT with 100 simulations though.. 
+# we keep the newly infected people by day
+
+newly_infected_by_day <- SIR('5',Highschool, 0.15)[[1]]
+newly_infected_by_day2 <- SIR('5', Highschool_2, 0.15)[[1]]
+newly_infected_by_day3 <- SIR('5', Highschool_3, 0.15)[[1]]
+
+dfH = data.frame(x = 1:length(newly_infected_by_day), y = newly_infected_by_day)
+dfH2 = data.frame(x = 1:length(newly_infected_by_day2), y = newly_infected_by_day2)
+dfH3 = data.frame(x = 1:length(newly_infected_by_day3), y = newly_infected_by_day3)
+
+ggplot() +
+  geom_line(data = dfH, aes(x = x, y = y), color = "red") +
+  geom_line(data = dfH2, aes(x = x, y = y), color = "blue") +
+  geom_line(data = dfH3, aes(x = x, y = y), color = "green") +
+  labs(x = "Day", y = "# - newly infected") +
+  scale_color_manual(labels = c("Array 1", "Array 2", "Array 3"), 
+                     values=c("red", "blue", "green")) +
+  annotate("text", x = 5, y = 15, label = "Red for Highchool") +
+  annotate("text", x = 5, y = 14, label = "Blue for Highchool2") +
+  annotate("text", x = 5, y = 13, label = "Green for Highschool3")
+
+# From the graph we see that the law of weak ties does not hold in this case as we have a lower peak for the number of newly infected people in the
+# Highschool3 network compaired to the second network and the original Highschool network, with the original network having the highest peak. This implies 
+# that in the SIR model the strength of weak ties may not be true. 
+
+```
+
+
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
